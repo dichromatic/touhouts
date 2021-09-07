@@ -19,6 +19,7 @@ function spaceinvaders() {
   class Thrust { constructor(public readonly magnitude:number) {} }
   class Shoot { constructor() {} }
   
+  // define keypresses
   const keyObservable = <T>(e:Event, k:Key, result:()=>T)=>
     fromEvent<KeyboardEvent>(document,e)
         .pipe(
@@ -34,6 +35,7 @@ function spaceinvaders() {
     startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-1)),
     stopReverse = keyObservable('keyup','ArrowDown', ()=>new Thrust(0))
 
+    // define game state as type for a template
     type State = Readonly<{
         pos:Vec, 
         vel:Vec,
@@ -43,7 +45,7 @@ function spaceinvaders() {
         torque:number
       }>
 
-      
+
 
 }
 
