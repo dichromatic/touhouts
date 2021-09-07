@@ -19,3 +19,5 @@ seperate function to graphically show keypresses on the html -> setTimeout(keypr
 where x is amount repeated
 
 vectors from the unit notes and the asteroids example will be reused
+
+if bullets dont expire or expire on screen exit then it will keep torusing around the screen (will probably fuck shit up)

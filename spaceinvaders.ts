@@ -26,13 +26,13 @@ function spaceinvaders() {
                 filter(({key})=>key === k),
                 filter(({repeat})=>!repeat),
                 map(result)),
-    startLeftTranslate = keyObservable('keydown','ArrowLeft',()=>new Translate(-10)),
-    startRightTranslate = keyObservable('keydown','ArrowRight',()=>new Translate(10)),
+    startLeftTranslate = keyObservable('keydown','ArrowLeft',()=>new Translate(-5)),
+    startRightTranslate = keyObservable('keydown','ArrowRight',()=>new Translate(5)),
     stopLeftTranslate = keyObservable('keyup','ArrowLeft',()=>new Translate(0)),
     stopRightTranslate = keyObservable('keyup','ArrowRight',()=>new Translate(0)),
-    startThrust = keyObservable('keydown','ArrowUp', ()=>new Thrust(10)),
+    startThrust = keyObservable('keydown','ArrowUp', ()=>new Thrust(5)),
     stopThrust = keyObservable('keyup','ArrowUp', ()=>new Thrust(0)),
-    startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-10)),
+    startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-5)),
     stopReverse = keyObservable('keyup','ArrowDown', ()=>new Thrust(0))
 
 // --------------------------------------------------------------------------------------
@@ -55,10 +55,9 @@ function spaceinvaders() {
     function createShip():Entity {
         return { 
             id: 'ship',
-            pos: new Vec(CanvasSize/2, CanvasSize/2),
+            pos: new Vec(CanvasSize/2, CanvasSize*0.8),
             vel: Vec.Zero,
             add: Vec.Zero,
-
         }
     }
 
