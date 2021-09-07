@@ -10,10 +10,8 @@
   .hidden {
     visibility:hidden;
   }
-  .bullet {
-    fill:red
-  }
-  .key {
+  
+  .arrowkey {
     width:18px;
     text-align:center;
     border-radius:3px;
@@ -34,7 +32,7 @@
     </style>
   </head>
 <body>
-  <script src="dist/spaceinvaders.js"></script>
+  <script src="dist/spaceinvadersbullet.js"></script>
   <svg id="svgCanvas" width="600" height="600" style="background-color:black">
     <g id="ship">
     <image href=reimu.png class="center" >
@@ -55,12 +53,11 @@
 <h2>Controls:</h2>
 <table>
     <!-- <tr><td>Thrust</td><td>Up Arrow</td></tr> -->
-    <tr><td>Left</td><td><div id="ArrowLeft" class="key">&#8678;</div></td></tr>
-    <tr><td>Right</td><td><div id="ArrowRight" class="key">&#8680;</div></td></tr>
-    <tr><td>Forward</td><td><div id="ArrowUp" class="key">&#8679;</div></td></tr>
-    <tr><td>Reverse</td><td><div id="ArrowDown" class="key">&#8681;</div></td></tr>
-    <tr><td>Fire</td><td>F</td>
-    <!-- 
+    <tr><td>Left</td><td><div id="ArrowLeft" class="arrowkey">&#8678;</div></td></tr>
+    <tr><td>Right</td><td><div id="ArrowRight" class="arrowkey">&#8680;</div></td></tr>
+    <tr><td>Forward</td><td><div id="ArrowUp" class="arrowkey">&#8679;</div></td></tr>
+    <tr><td>Reverse</td><td><div id="ArrowDown" class="arrowkey">&#8681;</div></td></tr>
+    <!-- <tr><td>Fire</td><td>Space</td>
     <tr><td>Restart Game</td><td>F5</td></tr> -->
 </table>
 </div>
