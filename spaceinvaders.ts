@@ -13,7 +13,8 @@ function spaceinvaders() {
             CanvasSize:600,
             BulletRadius: 5,
             BulletVelocity: 3.5,
-            AlienVelocity: 1,
+            AlienBulletDirection: 180,
+            AlienVelocity: 1.7,
             PlayerVelocity: 3,
             PlayerRadius: 10,
             AlienRadius: 10,
@@ -113,9 +114,10 @@ function spaceinvaders() {
 
         // create array of aliens for their 2d positions
         startAliens = [
-            [...Array(6)].map((_,i) => createAlien(String(i))(Constants.AlienRadius)(new Vec((i)*100, 50))(0)),
-            [...Array(6)].map((_,i) => createAlien(String(i+6))(Constants.AlienRadius)(new Vec((i)*100, 100))(0)),
-            [...Array(6)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i)*100, 150))(0))
+            [...Array(7)].map((_,i) => createAlien(String(i))(Constants.AlienRadius)(new Vec((i)*83, 100))(0)),
+            [...Array(7)].map((_,i) => createAlien(String(i+7))(Constants.AlienRadius)(new Vec((i)*83, 150))(0)),
+            [...Array(7)].map((_,i) => createAlien(String(i+14))(Constants.AlienRadius)(new Vec((i)*83, 200))(0)),
+            [...Array(7)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i)*83, 250))(0))
         ],
     
         initialState:State = {
@@ -124,61 +126,13 @@ function spaceinvaders() {
             bullets: [],
             aliens: flatMap(startAliens, x => x), //flatmap from asteroids used to flatten, couldnt be stuffed writing my own flatten so just used flatmap with an extra argument function that does nothing lol
             garbage: [],
-            objCount: 19
+            objCount: 50
         },
     
 // --------------------------------------------------------------------------------------
 // functions to manipulate state and entities
 
-        // function to give aliens a velocity vector
-        alienMovement = (o: Entity) => <Entity> {...o,
-            add: Vec.unitVecInDirection(90).scale(1),
-        },
-
-        // toruswrap taken from asteroids, but only done on X dimension
-        torusWrapX = ({x,y}:Vec) => { 
-            const wrap = (v:number) => 
-            v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
-        return new Vec(wrap(x),y)
-        },
-
-        // movement of entities go through here for simplicity
-        moveEntity = (o: Entity) => <Entity> {
-            ...o,
-            pos: torusWrapX(o.pos.add(o.vel)),
-            vel: o.add
-        },
-
-        // movement of bullet needs to have a constant velocity, so needs different physics
-        moveBullet = (o:Entity) => <Entity>{
-            ...o,
-            pos:torusWrapX(o.pos.add(o.vel)),
-            vel:Vec.unitVecInDirection(0).scale(Constants.BulletVelocity)
-        },
-
-        // function to handle collisions that returns state HALF DONE
-        handleCollisions = (s:State) => {
-            const entitiesCollided = ([a,b]: [Entity,Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,  // check if the positions of both entities are in the region of their radii
-            shipCollision = s.aliens.filter(r => entitiesCollided([s.ship, r])).length > 0,                     // check if the ship has collided with an entity
-            allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),         // flatten bullets and aliens
-
-            collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                            // filter for collided bullets and aliens
-            collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                            // array of bullets that have collided
-            collidedAliens = collidedBulletsAndAliens.map(([_, aliens]) => aliens),                             // array of aliens that have collided
-
-            cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                           // function for cutting out the entities that have collided
-
-            return <State> {...s,
-                bullets: cut(s.bullets)(collidedBullets),
-                aliens: cut(s.aliens)(collidedAliens),
-                garbage: s.garbage.concat(collidedBullets, collidedAliens)
-            };
-        },
-
-// --------------------------------------------------------------------------------------    
-// final state reducers
-
-        // interval tick which calls state and entity manipulators, for now only handles things without any collisions
+        // interval tick which calls state and entity manipulators
         tick = (s:State, elapsed:number) => {
 
             // deletion of entities that are out of y bounds, split into active and binned. active uses not which comes from asteroids
@@ -187,16 +141,65 @@ function spaceinvaders() {
                 activeBullets = s.bullets.filter(not(boundarybin)),
                 binnedAliens: Entity[] = s.aliens.filter(boundarybin),
                 activeAliens = s.aliens.filter(not(boundarybin));
-            
+
+            // toruswrap taken from asteroids, but only done on X dimension
+            const torusWrapX = ({x,y}:Vec) => { 
+                const wrap = (v:number) => 
+                v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
+            return new Vec(wrap(x),y)
+            }
+
+            // function to give aliens a velocity vector
+            const alienMovement = (o: Entity) => <Entity> {...o,
+                add: Vec.unitVecInDirection(elapsed*2).scale(Constants.AlienVelocity),
+                pos: o.pos.add(o.vel),
+                vel: o.add
+            }
+
+            // movement of entities go through here for simplicity
+            const moveEntity = (o: Entity) => <Entity> {
+                ...o,
+                pos: torusWrapX(o.pos.add(o.vel)),
+                vel: o.add
+            }
+
+            // movement of bullet needs to have a constant velocity, so needs different physics (will probably add angle down the line)
+            const moveBullet = (o:Entity) => <Entity>{
+                ...o,
+                pos:torusWrapX(o.pos.add(o.vel)),
+                vel:Vec.unitVecInDirection(0).scale(Constants.BulletVelocity)
+            }
+
+            // function to handle collisions that returns state HALF DONE
+            const handleCollisions = (s:State) => {
+                const entitiesCollided = ([a,b]: [Entity,Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,  // check if the positions of both entities are in the region of their radii
+                shipCollision = s.aliens.filter(r => entitiesCollided([s.ship, r])).length > 0,                     // check if the ship has collided with an entity
+                allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),         // flatten bullets and aliens
+
+                collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                            // filter for collided bullets and aliens
+                collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                            // array of bullets that have collided
+                collidedAliens = collidedBulletsAndAliens.map(([_, aliens]) => aliens),                             // array of aliens that have collided
+
+                cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                           // function for cutting out the entities that have collided
+
+                return <State> {...s,
+                    bullets: cut(s.bullets)(collidedBullets),
+                    aliens: cut(s.aliens)(collidedAliens),
+                    garbage: s.garbage.concat(collidedBullets, collidedAliens)
+                };
+            }
 
             return handleCollisions({...s,
                 ship:moveEntity(s.ship),
                 bullets: activeBullets.map(moveBullet),
-                aliens: activeAliens.map(alienMovement).map(moveEntity),
+                aliens: activeAliens.map(alienMovement),
                 time: elapsed,
                 garbage: s.garbage.concat(binnedBullets, binnedAliens)
             })
         },
+
+// --------------------------------------------------------------------------------------    
+// final state reducers
 
         // reducing states
         reduceState = (s:State, e:Shoot|Translate|Thrust|Tick)=>
