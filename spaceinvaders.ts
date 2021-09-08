@@ -10,10 +10,13 @@ function spaceinvaders() {
     const
         Constants = {
             CanvasSize:600,
-            BulletRadius:3,
-            BulletVelocity: 3,
+            BulletRadius: 5,
+            BulletVelocity: 3.5,
             AlienVelocity: 1,
-            PlayerVelocity: 3
+            PlayerVelocity: 3,
+            PlayerRadius: 10,
+            AlienRadius: 10,
+            StartAlienAmount: 30
         } as const
 
     // the game has these entity types:
@@ -95,7 +98,7 @@ function spaceinvaders() {
         return { 
             ViewType: 'ship',
             id: 'ship',
-            radius: 5,
+            radius: Constants.PlayerRadius,
             pos: new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8),
             vel: Vec.Zero,
             add: Vec.Zero,
@@ -106,45 +109,55 @@ function spaceinvaders() {
 
     // create initial state and entities
     const 
+
+        // create array of aliens for their 2d positions
+        startAliens = [
+            [...Array(6)].map((_,i) => createAlien(String(i))(Constants.AlienRadius)(new Vec((i)*100, 50))(0)),
+            [...Array(6)].map((_,i) => createAlien(String(i+6))(Constants.AlienRadius)(new Vec((i)*100, 100))(0)),
+            [...Array(6)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i)*100, 150))(0))
+        ],
     
         initialState:State = {
             time: 0,
             ship: createShip(),
             bullets: [],
-            aliens: [],
+            aliens: flatMap(startAliens, x => x), //flatmap from asteroids used to flatten, couldnt be stuffed writing my own flatten so just used flatmap with an extra argument function that does nothing lol
             garbage: [],
-            objCount: 1
+            objCount: 19
         },
     
 // --------------------------------------------------------------------------------------
 // functions to manipulate state and entities
 
-        // toruswrap taken from asteroids
-        torusWrap = ({x,y}:Vec) => { 
+        // function to give aliens a velocity vector
+        alienMovement = (o: Entity) => <Entity> {...o,
+            add: Vec.unitVecInDirection(90).scale(1),
+        },
+
+        // toruswrap taken from asteroids, but only done on X dimension
+        torusWrapX = ({x,y}:Vec) => { 
             const wrap = (v:number) => 
             v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
-        return new Vec(wrap(x),wrap(y))
+        return new Vec(wrap(x),y)
         },
 
         // movement of entities go through here for simplicity
         moveEntity = (o: Entity) => <Entity> {
             ...o,
-            pos: torusWrap(o.pos.add(o.vel)),
+            pos: torusWrapX(o.pos.add(o.vel)),
             vel: o.add
         },
 
         // movement of bullet needs to have a constant velocity, so needs different physics
         moveBullet = (o:Entity) => <Entity>{
             ...o,
-            pos:torusWrap(o.pos.add(o.vel)),
+            pos:torusWrapX(o.pos.add(o.vel)),
             vel:Vec.unitVecInDirection(0).scale(Constants.BulletVelocity)
         },
 
         // function to handle collisions that returns state NOT DONE
         handleCollisions = (s:State) => {
-            // const
-            //     entitiesCollided = ([a,b]:[Entity, Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,
-            //     ship
+
             return <State> {
                 ...s
             }
@@ -155,10 +168,21 @@ function spaceinvaders() {
 
         // interval tick which calls state and entity manipulators, for now only handles things without any collisions
         tick = (s:State, elapsed:number) => {
+
+            // deletion of entities that are out of y bounds, split into active and binned. active uses not which comes from asteroids
+            const binned = (o: Entity) => o.pos.y >= Constants.CanvasSize || o.pos.y <= 0,
+                binnedBullets: Entity[] = s.bullets.filter(binned),
+                activeBullets = s.bullets.filter(not(binned)),
+                binnedAliens: Entity[] = s.aliens.filter(binned),
+                activeAliens = s.aliens.filter(not(binned));
+            
+
             return handleCollisions({...s,
                 ship:moveEntity(s.ship),
-                bullets:s.bullets.map(moveBullet),
-                time:elapsed
+                bullets: activeBullets.map(moveBullet),
+                aliens: activeAliens.map(alienMovement).map(moveEntity),
+                time:elapsed,
+                garbage: s.garbage.concat(binnedBullets, binnedAliens)
             })
         },
 
@@ -166,12 +190,12 @@ function spaceinvaders() {
         reduceState = (s:State, e:Shoot|Translate|Thrust|Tick)=>
             e instanceof Translate ? {...s, 
                 ship: {...s.ship, 
-                    add: Vec.unitVecInDirection(90).scale(e.magnitude)  // puts a magnitude into add to add onto position vector later in moveEntity
+                    add: Vec.unitVecInDirection(90).scale(e.magnitude)  // puts a magnitude into add to add onto velocity vector later in moveEntity
                 }
             } :
             e instanceof Thrust ? {...s,
                 ship: {...s.ship,
-                    add: Vec.unitVecInDirection(0).scale(e.magnitude)   // puts a magnitude into add to add onto position vector later in moveEntity
+                    add: Vec.unitVecInDirection(0).scale(e.magnitude)   // puts a magnitude into add to add onto velocity vector later in moveEntity
                 }
             } :
             e instanceof Shoot ? {...s,
@@ -180,7 +204,7 @@ function spaceinvaders() {
                         createBullet                                    //create new bullet on space press
                         (String(s.objCount))                            //bullet id
                         (Constants.BulletRadius)                        //bullet rad
-                        (s.ship.pos.add(unitVec.scale(s.ship.radius)))  //bullet pos
+                        (s.ship.pos.add(unitVec.scale(20)))             //bullet pos
                         (s.time))                                       //bullet time created
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
@@ -197,14 +221,15 @@ function spaceinvaders() {
 // --------------------------------------------------------------------------------------
 // update view
         
-        // view updater function - only part of the code that isnt pure and reactive
+        // view updater function - only part of the code that isnt pure
         function updateView(s: State) {
             const  
                 ship = document.getElementById("ship")!,
                 svg = document.getElementById("svgCanvas")!,
                 show = (id:string,condition:boolean)=>((e:HTMLElement) => 
                 condition ? e.classList.remove('hidden'): e.classList.add('hidden'))(document.getElementById(id)!),
-                updateEntityView = (b: Entity) => {
+
+                updateEntityView = (b: Entity) => { // taken from asteroids as a way to generate objects for HTML, mostly for bullets
                     function createEntityView() {
                         const v = document.createElementNS(svg.namespaceURI, "ellipse")!;
                         attr(v, {id:b.id, rx: b.radius, ry:b.radius});
@@ -215,8 +240,24 @@ function spaceinvaders() {
                     const v = document.getElementById(b.id) || createEntityView();
                     attr(v, {cx:b.pos.x, cy:b.pos.y})
                 };
+
             attr(ship, {transform: `translate(${s.ship.pos.x},${s.ship.pos.y})`});
+            s.aliens.forEach(updateEntityView)
             s.bullets.forEach(updateEntityView)
+            
+            s.garbage // remove entities that are out of bounds from the scene. uses helper functions from asteroids
+                .map(o => document.getElementById(o.id))
+                .filter(isNotNullOrUndefined)
+                .forEach(v => {
+                    try{
+                        svg.removeChild(v);
+                    } catch (e) {
+                        // rarely it can happen that a bullet can be in exit
+                        // for both expiring and colliding in the same tick,
+                        // which will cause this exception
+                        console.log('Already removed: ' + v.id);
+                    }
+                });
         }
     }
 

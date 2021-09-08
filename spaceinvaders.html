@@ -4,6 +4,9 @@
   .ship {
     fill: lime;
   }
+  .alien {
+      fill: white
+  }
   .booster {
     fill: orange;
   }
@@ -11,7 +14,10 @@
     visibility:hidden;
   }
   .bullet {
-    fill:red
+    fill:white
+  }
+  .alienbullet{
+      fill:red
   }
   .key {
     width:18px;
@@ -38,7 +44,7 @@
   <script src="dist/spaceinvaders.js"></script>
   <svg id="svgCanvas" width="600" height="600" style="background-color:black">
     <g id="ship">
-    <image href=reimu.png class="center" transform="translate(-18.5)" >
+    <image href=reimu.png class="center" transform="translate(-18.5, -25.5)" >
     </image>
     <polygon class="booster hidden" id="thruster" points="-3,20 0,35 3,20">
     </polygon>
