@@ -27,3 +27,12 @@ all entities will only wrap in the x axis. bullets will stop existing once it hi
 shields will circle around the player as balls. Will have differing hp by overlapping different circles 
 
 add ways for custom intervals, different levels, different bullet movement, different alien movement for the full touhou game -> bullets will have angle in later revisions. 
+
+list of things to account for in write up:
+how bullet movements work
+how alien movements work
+how player and shield movement works
+how collisions are handled
+how things are garbaged
+how wrapping works and why
+what things are taken from asteroids
