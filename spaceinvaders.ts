@@ -1,5 +1,6 @@
 import { fromEvent,interval, merge } from 'rxjs'; 
 import { map, filter, scan} from 'rxjs/operators';
+import { brotliDecompressSync } from 'zlib';
 
 type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f'
 type Event = 'keydown' | 'keyup'
@@ -155,12 +156,23 @@ function spaceinvaders() {
             vel:Vec.unitVecInDirection(0).scale(Constants.BulletVelocity)
         },
 
-        // function to handle collisions that returns state NOT DONE
+        // function to handle collisions that returns state HALF DONE
         handleCollisions = (s:State) => {
+            const entitiesCollided = ([a,b]: [Entity,Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,  // check if the positions of both entities are in the region of their radii
+            shipCollision = s.aliens.filter(r => entitiesCollided([s.ship, r])).length > 0,                     // check if the ship has collided with an entity
+            allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),         // flatten bullets and aliens
 
-            return <State> {
-                ...s
-            }
+            collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                            // filter for collided bullets and aliens
+            collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                            // array of bullets that have collided
+            collidedAliens = collidedBulletsAndAliens.map(([_, aliens]) => aliens),                             // array of aliens that have collided
+
+            cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                           // function for cutting out the entities that have collided
+
+            return <State> {...s,
+                bullets: cut(s.bullets)(collidedBullets),
+                aliens: cut(s.aliens)(collidedAliens),
+                garbage: s.garbage.concat(collidedBullets, collidedAliens)
+            };
         },
 
 // --------------------------------------------------------------------------------------    
@@ -170,18 +182,18 @@ function spaceinvaders() {
         tick = (s:State, elapsed:number) => {
 
             // deletion of entities that are out of y bounds, split into active and binned. active uses not which comes from asteroids
-            const binned = (o: Entity) => o.pos.y >= Constants.CanvasSize || o.pos.y <= 0,
-                binnedBullets: Entity[] = s.bullets.filter(binned),
-                activeBullets = s.bullets.filter(not(binned)),
-                binnedAliens: Entity[] = s.aliens.filter(binned),
-                activeAliens = s.aliens.filter(not(binned));
+            const boundarybin = (o: Entity) => o.pos.y >= Constants.CanvasSize || o.pos.y <= 0,
+                binnedBullets: Entity[] = s.bullets.filter(boundarybin),
+                activeBullets = s.bullets.filter(not(boundarybin)),
+                binnedAliens: Entity[] = s.aliens.filter(boundarybin),
+                activeAliens = s.aliens.filter(not(boundarybin));
             
 
             return handleCollisions({...s,
                 ship:moveEntity(s.ship),
                 bullets: activeBullets.map(moveBullet),
                 aliens: activeAliens.map(alienMovement).map(moveEntity),
-                time:elapsed,
+                time: elapsed,
                 garbage: s.garbage.concat(binnedBullets, binnedAliens)
             })
         },
@@ -216,7 +228,7 @@ function spaceinvaders() {
             merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate,
                 stopRightTranslate,startThrust,stopThrust,startReverse, stopReverse,
                 shoot)  
-                .pipe(scan(reduceState, initialState)).subscribe(updateView, x => {console.log(x.ship.vel)})
+                .pipe(scan(reduceState, initialState)).subscribe(updateView)
 
 // --------------------------------------------------------------------------------------
 // update view
@@ -245,7 +257,7 @@ function spaceinvaders() {
             s.aliens.forEach(updateEntityView)
             s.bullets.forEach(updateEntityView)
             
-            s.garbage // remove entities that are out of bounds from the scene. uses helper functions from asteroids
+            s.garbage // remove entities that are in the garbage. uses helper functions from asteroids
                 .map(o => document.getElementById(o.id))
                 .filter(isNotNullOrUndefined)
                 .forEach(v => {
@@ -253,7 +265,7 @@ function spaceinvaders() {
                         svg.removeChild(v);
                     } catch (e) {
                         // rarely it can happen that a bullet can be in exit
-                        // for both expiring and colliding in the same tick,
+                        // for both out of bounding and colliding in the same tick,
                         // which will cause this exception
                         console.log('Already removed: ' + v.id);
                     }
