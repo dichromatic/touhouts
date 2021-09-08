@@ -21,3 +21,6 @@ where x is amount repeated
 vectors from the unit notes and the asteroids example will be reused
 
 if bullets dont expire or expire on screen exit then it will keep torusing around the screen (will probably fuck shit up)
+
+all entities will only wrap in the x axis. bullets will stop existing once it hits the y canvas limits (0 or 600) and players and aliens cant cross that boundary. 
+

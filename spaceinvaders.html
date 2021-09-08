@@ -28,7 +28,8 @@
   }
   .center{
       display: block;
-      margin: auto;
+      margin-left: auto;
+      margin-right: auto;
       text-align: center;
   }
     </style>
@@ -37,7 +38,7 @@
   <script src="dist/spaceinvaders.js"></script>
   <svg id="svgCanvas" width="600" height="600" style="background-color:black">
     <g id="ship">
-    <image href=reimu.png class="center" >
+    <image href=reimu.png class="center" transform="translate(-18.5)" >
     </image>
     <polygon class="booster hidden" id="thruster" points="-3,20 0,35 3,20">
     </polygon>
@@ -59,7 +60,7 @@
     <tr><td>Right</td><td><div id="ArrowRight" class="key">&#8680;</div></td></tr>
     <tr><td>Forward</td><td><div id="ArrowUp" class="key">&#8679;</div></td></tr>
     <tr><td>Reverse</td><td><div id="ArrowDown" class="key">&#8681;</div></td></tr>
-    <tr><td>Fire</td><td>F</td>
+    <tr><td>Fire</td><td>F<div class="key"></div></td>
     <!-- 
     <tr><td>Restart Game</td><td>F5</td></tr> -->
 </table>

@@ -5,18 +5,19 @@ type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f'
 type Event = 'keydown' | 'keyup'
 
 function spaceinvaders() {
+
     // game constants
     const
         Constants = {
             CanvasSize:600,
             BulletRadius:3,
             BulletVelocity: 3,
-            AlienVelocity: 3,
-            PlayerVelocity: 5
+            AlienVelocity: 1,
+            PlayerVelocity: 3
         } as const
 
     // the game has these entity types:
-    type ViewType = 'ship' | 'rock' | 'bullet' | 'alien'
+    type ViewType = 'ship' | 'rock' | 'bullet' | 'alien' | 'alienbullet'
 
     // game has these game state changes
     class Tick { constructor(public readonly elapsed:number) {} }
@@ -34,39 +35,45 @@ function spaceinvaders() {
                 filter(({key})=>key === k),
                 filter(({repeat})=>!repeat),
                 map(result)),
-    startLeftTranslate = keyObservable('keydown','ArrowLeft',()=>new Translate(-5)),
-    startRightTranslate = keyObservable('keydown','ArrowRight',()=>new Translate(5)),
+    startLeftTranslate = keyObservable('keydown','ArrowLeft',()=>new Translate(-Constants.PlayerVelocity)),
+    startRightTranslate = keyObservable('keydown','ArrowRight',()=>new Translate(Constants.PlayerVelocity)),
     stopLeftTranslate = keyObservable('keyup','ArrowLeft',()=>new Translate(0)),
     stopRightTranslate = keyObservable('keyup','ArrowRight',()=>new Translate(0)),
-    startThrust = keyObservable('keydown','ArrowUp', ()=>new Thrust(5)),
+    startThrust = keyObservable('keydown','ArrowUp', ()=>new Thrust(Constants.PlayerVelocity)),
     stopThrust = keyObservable('keyup','ArrowUp', ()=>new Thrust(0)),
-    startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-5)),
+    startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-Constants.PlayerVelocity)),
     stopReverse = keyObservable('keyup','ArrowDown', ()=>new Thrust(0)),
     shoot = keyObservable('keydown','f', ()=>new Shoot())
 
 // --------------------------------------------------------------------------------------
+// defining templates for entities and state
 
     // define entity interface
     interface IEntity {
-        ViewType: ViewType,
-        id: string,
-        radius: number,
-        pos: Vec,
-        vel: Vec,
-        add: Vec,
-        acc: Vec,
-        createTime: number
+        ViewType: ViewType,     // type of entity
+        id: string,             // id of entity (based on total state object count)
+        radius: number,         // radius of entity (everything is a circle)
+        pos: Vec,               // position vector of entity
+        vel: Vec,               // velocity vector of entity
+        add: Vec,               // potential velocity addition vector of entity
+        acc: Vec,               // potential acceleration addition vector of entity
+        createTime: number      // time entity is created in relation to Tick interval
     }
 
     type Entity = Readonly<IEntity>
 
     // define game state as type for a template
     type State = Readonly<{
-        time: number,
-        ship: Entity,
-        bullets: ReadonlyArray<Entity>,
-        objCount: number
+        time: number,                   // time the state is in in relation to Tick interval
+        ship: Entity,                   // the sole ship / player in the game
+        bullets: ReadonlyArray<Entity>, // bullet objects array
+        aliens: ReadonlyArray<Entity>,  // aliens array
+        garbage: ReadonlyArray<Entity>, // garbage objects array, things that need to be removed from screen in updateview
+        objCount: number                // object count 
     }>
+
+// --------------------------------------------------------------------------------------
+// functions to create state and entities 
 
     // curried func to make entities with varying arguments
     const createEntity = (viewType: ViewType) => (id: string) => (radius: number) => (pos: Vec) => (timeCreated: number) => <Entity>{
@@ -80,14 +87,15 @@ function spaceinvaders() {
         createTime: timeCreated
     },
     createAlien = createEntity('alien'),
-    createBullet = createEntity('bullet')
+    createBullet = createEntity('bullet'),
+    createAlienBullet = createEntity('alienbullet')
 
     // since there is only one ship, no need to make it out of a createentity instance
     function createShip():Entity {
         return { 
             ViewType: 'ship',
             id: 'ship',
-            radius: 20,
+            radius: 5,
             pos: new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8),
             vel: Vec.Zero,
             add: Vec.Zero,
@@ -96,21 +104,21 @@ function spaceinvaders() {
         }
     }
 
-    // bullets will have different physics to the normal ship movement, so will implement the physics from asteroids:
-    
-    
-// --------------------------------------------------------------------------------------
-
-    // create initial state
+    // create initial state and entities
     const 
     
         initialState:State = {
             time: 0,
             ship: createShip(),
             bullets: [],
+            aliens: [],
+            garbage: [],
             objCount: 1
         },
-        
+    
+// --------------------------------------------------------------------------------------
+// functions to manipulate state and entities
+
         // toruswrap taken from asteroids
         torusWrap = ({x,y}:Vec) => { 
             const wrap = (v:number) => 
@@ -129,7 +137,7 @@ function spaceinvaders() {
         moveBullet = (o:Entity) => <Entity>{
             ...o,
             pos:torusWrap(o.pos.add(o.vel)),
-            vel:Vec.unitVecInDirection(0).scale(5)
+            vel:Vec.unitVecInDirection(0).scale(Constants.BulletVelocity)
         },
 
         // function to handle collisions that returns state NOT DONE
@@ -142,7 +150,10 @@ function spaceinvaders() {
             }
         },
 
-        // interval tick, for now only handles things without any collisions
+// --------------------------------------------------------------------------------------    
+// final state reducers
+
+        // interval tick which calls state and entity manipulators, for now only handles things without any collisions
         tick = (s:State, elapsed:number) => {
             return handleCollisions({...s,
                 ship:moveEntity(s.ship),
@@ -168,13 +179,13 @@ function spaceinvaders() {
                     ((unitVec:Vec) => 
                         createBullet                                    //create new bullet on space press
                         (String(s.objCount))                            //bullet id
-                        (3)                                             //bullet rad
+                        (Constants.BulletRadius)                        //bullet rad
                         (s.ship.pos.add(unitVec.scale(s.ship.radius)))  //bullet pos
                         (s.time))                                       //bullet time created
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
             } :
-            tick(s, e.elapsed)
+            tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
         // merge all events and subscribe to updater
         const subscription = 
@@ -182,8 +193,11 @@ function spaceinvaders() {
                 stopRightTranslate,startThrust,stopThrust,startReverse, stopReverse,
                 shoot)  
                 .pipe(scan(reduceState, initialState)).subscribe(updateView, x => {console.log(x.ship.vel)})
+
+// --------------------------------------------------------------------------------------
+// update view
         
-        // view updater function
+        // view updater function - only part of the code that isnt pure and reactive
         function updateView(s: State) {
             const  
                 ship = document.getElementById("ship")!,
@@ -225,38 +239,11 @@ function showKeys() {
   }
 setTimeout(showKeys, 0)
 
+// --------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * vector class taken from asteroids
+ */
 class Vec {
     constructor(public readonly x: number = 0, public readonly y: number = 0) {}
     add = (b:Vec) => new Vec(this.x + b.x, this.y + b.y)
@@ -269,7 +256,6 @@ class Vec {
                     (cos,sin,{x,y})=>new Vec(x*cos - y*sin, x*sin + y*cos)
                 )(Math.cos(rad), Math.sin(rad), this)
                 )(Math.PI * deg / 180)
-    
     static unitVecInDirection = (deg: number) => new Vec(0,-1).Translate(deg)
     static Zero = new Vec();
     }
