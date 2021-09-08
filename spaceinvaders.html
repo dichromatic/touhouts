@@ -2,7 +2,7 @@
   <head>
     <style>
   .ship {
-    fill: lime;
+    fill:red;
   }
   .alien {
       fill: white
@@ -17,7 +17,12 @@
     fill:white
   }
   .alienbullet{
-      fill:red
+    fill:red
+  }
+  .gameover{
+    font-family: sans-serif;
+    font-size: 80px;
+    fill: red;
   }
   .key {
     width:18px;
@@ -54,6 +59,7 @@
     </polygon>
     <polygon class="booster hidden" id="reverseThrust" points="3,-20 0,-35 -3,-20">
     </polygon>
+    <circle class="ship" r="7" stroke="white" stroke-width="2"></circle>
     <!-- <polygon class="ship" points="-15,20 15,20 0,-20"> -->
     <!-- </polygon> -->
     </g>
