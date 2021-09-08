@@ -79,19 +79,20 @@ function spaceinvaders() {
         aliens: ReadonlyArray<Entity>,      // aliens array
         garbage: ReadonlyArray<Entity>,     // garbage objects array, things that need to be removed from screen in updateview
         objCount: number,                   // object count 
-        gameOver: boolean
+        gameOver: boolean,
+        gameWon: boolean
     }>
 
 // --------------------------------------------------------------------------------------
 // functions to create state and entities 
 
     // curried func to make entities with varying arguments
-    const createEntity = (viewType: ViewType) => (id: string) => (radius: number) => (pos: Vec) => (timeCreated: number) => <Entity>{
+    const createEntity = (viewType: ViewType) => (id: string) => (radius: number) => (pos: Vec) => (vel: Vec) => (timeCreated: number) => <Entity>{
         ViewType: viewType,
         id: id,
         radius: radius,
         pos: pos,
-        vel: Vec.Zero,
+        vel: vel,
         add: Vec.Zero,
         acc: Vec.Zero,
         createTime: timeCreated
@@ -114,26 +115,19 @@ function spaceinvaders() {
         }
     }
 
-    // create initial state and entities
-    const 
+    const
 
-        // create array of aliens for their 2d positions
-        startAliens = [
-            // [...Array(7)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*80, 100))(0)),
-            // [...Array(15)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*50, 150))(0)),
-            // [...Array(15)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*50, 200))(0)),
-            // [...Array(8)].map((_,i) => createAlien(String(i+29))(Constants.AlienRadius)(new Vec((i)*60, 250))(0))
-        ],
-    
+        // create initial state and entities
         initialState:State = {
             time: 0,
             ship: createShip(),
             bullets: [],
             alienBullets: [],
-            aliens: [createAlien(String(1))(Constants.AlienRadius)(new Vec(Constants.CanvasSize/2, 100))(0)],
+            aliens: [],
             garbage: [],
             objCount: 50,
-            gameOver: false
+            gameOver: false,
+            gameWon: false
         },
     
 // --------------------------------------------------------------------------------------
@@ -143,13 +137,18 @@ function spaceinvaders() {
         tick = (s:State, elapsed:number) => {
 
             // deletion of entities that are out of y bounds, split into active and binned. active uses not which comes from asteroids
-            const boundarybin = (o: Entity) => o.pos.y >= Constants.CanvasSize || o.pos.y <= 0,
-                binnedBullets: Entity[] = s.bullets.filter(boundarybin),
-                activeBullets = s.bullets.filter(not(boundarybin)),
-                binnedAlienBullets: Entity[] = s.alienBullets.filter(boundarybin),
-                activeAlienBullets = s.alienBullets.filter(not(boundarybin))
-                // binnedAliens: Entity[] = s.aliens.filter(boundarybin),
-                // activeAliens = s.aliens.filter(not(boundarybin));
+            const boundarybinY = (o: Entity) => o.pos.y >= Constants.CanvasSize || o.pos.y <= 0,
+                binnedBullets: Entity[] = s.bullets.filter(boundarybinY),
+                activeBullets = s.bullets.filter(not(boundarybinY)),
+                binnedAlienBullets: Entity[] = s.alienBullets.filter(boundarybinY),
+                activeAlienBullets = s.alienBullets.filter(not(boundarybinY))
+
+            // toruswrap from asteroids
+            const torusWrap = ({x,y}:Vec) => { 
+                const wrap = (v:number) => 
+                v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
+            return new Vec(wrap(x),wrap(y))
+            }
 
             // toruswrap taken from asteroids, but only done on X dimension
             const torusWrapX = ({x,y}:Vec) => { 
@@ -158,15 +157,9 @@ function spaceinvaders() {
             return new Vec(wrap(x),y)
             }
 
-            const torusWrap = ({x,y}:Vec) => { 
-                const wrap = (v:number) => 
-                v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
-            return new Vec(wrap(x),wrap(y))
-            }
-
             // function to give aliens custom movement
             const alienMovement = (o: Entity) => <Entity> {...o,
-                add: Vec.unitVecInDirection(elapsed*2).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
+                add: Vec.unitVecInDirection(elapsed).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
                 pos: torusWrap(o.pos.add(o.vel)),
                 vel: o.add
             }
@@ -188,8 +181,7 @@ function spaceinvaders() {
             // movement of alien bullet has different direction
             const moveAlienBullet = (o: Entity) => <Entity>{
                 ...o,
-                pos:torusWrapX(o.pos.add(o.vel)),
-                vel:(Vec.unitVecInDirection(0).scale(-Constants.AlienBulletVelocity))
+                pos:o.pos.add(o.vel),
             }
 
             // function to handle collisions that returns state HALF DONE
@@ -203,30 +195,34 @@ function spaceinvaders() {
                 collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                            // array of bullets that have collided
                 collidedAliens = collidedBulletsAndAliens.map(([_, aliens]) => aliens),                             // array of aliens that have collided
 
+                win = s.alienBullets.length > 0 && s.aliens.length === 0,                                           // condition for winning game
+
                 cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                           // function for cutting out the entities that have collided
 
                 return <State> {...s,
                     bullets: cut(s.bullets)(collidedBullets),
                     aliens: cut(s.aliens)(collidedAliens),
                     garbage: s.garbage.concat(collidedBullets, collidedAliens),
-                    gameOver: shipAlienCollision || shipBulletCollision
+                    gameOver: shipAlienCollision || shipBulletCollision,
+                    gameWon: win
                 };
             }
 
+            // one of the most scuffed map callback functions i have ever written - converts every alien into an alienbullet just so i can spawn an alien bullet with position relative to the alien
             const createAlienBullets = (s:State) => {
-                const randInt = Math.floor(Math.random()*20) + 50 // math.random is IMPURE!!!
-
+                const randInt = 50 // math.random is IMPURE!!!
                 return <State> {...s,
-                    alienBullets: s.time % randInt === 0 ? s.alienBullets.concat(s.aliens.map(x => createAlienBullet(String(elapsed+Number(x.id)+s.objCount))(Constants.BulletRadius)(x.pos.add(Vec.unitVecInDirection(0).scale(-20)))(elapsed))): s.alienBullets,
+                    alienBullets: s.time % randInt === 0 ? s.alienBullets.concat(s.aliens.map(x => createAlienBullet(String(elapsed+Number(x.id)+s.objCount))(Constants.BulletRadius)(x.pos.add(Vec.unitVecInDirection(0).scale(-20)))(x.vel)(elapsed))): s.alienBullets,
                     objCount: s.time % randInt  === 0 ? elapsed+s.objCount+100 : s.objCount
                 }
             }
 
+            // bring everything together
             return createAlienBullets(handleCollisions({...s,
                 ship:moveEntity(s.ship),
                 bullets: activeBullets.map(moveBullet),
-                aliens: s.aliens.length > 1 ? s.aliens.map(alienMovement): s.aliens,
-                alienBullets: s.aliens.length > 1 ? activeAlienBullets.map(moveAlienBullet): s.alienBullets,
+                aliens: s.aliens.map(alienMovement),
+                alienBullets: activeAlienBullets.map(moveAlienBullet),
                 time: elapsed,
                 garbage: s.garbage.concat(binnedBullets, binnedAlienBullets)
             }))
@@ -254,14 +250,15 @@ function spaceinvaders() {
                         (String(s.objCount))                            //bullet id
                         (Constants.BulletRadius)                        //bullet rad
                         (s.ship.pos.add(unitVec.scale(25)))             //bullet pos
+                        (Vec.Zero)
                         (s.time))                                       //bullet time created
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
             } :
             e instanceof Level ? e.level === 1 ? {...s,
-                aliens: [...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 100))(0))
+                aliens: [...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 100))(Vec.Zero)(0))
             }: {...s,
-                aliens: s.aliens.concat([...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 0))(0)), [...Array(8)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*100, 200))(0)))
+                aliens: s.aliens.concat([...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 0))(Vec.Zero)(0)), [...Array(8)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*100, 200))(Vec.Zero)(0)))
             }:
             tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
@@ -323,6 +320,17 @@ function spaceinvaders() {
                     class: 'gameover'
                 });
                 v.textContent = 'Game Over';
+                svg.appendChild(v);
+            }
+            if (s.gameWon) {
+                subscription.unsubscribe();
+                const v = document.createElementNS(svg.namespaceURI, 'text')!;
+                attr(v, {
+                    x: Constants.CanvasSize / 8,
+                    y: Constants.CanvasSize / 2,
+                    class: 'gamewon'
+                });
+                v.textContent = 'Game Won!';
                 svg.appendChild(v);
             }
         }
