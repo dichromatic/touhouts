@@ -1,4 +1,3 @@
-import { create } from 'eslint/lib/rules/*';
 import { fromEvent,interval, merge } from 'rxjs'; 
 import { map, filter, scan} from 'rxjs/operators';
 

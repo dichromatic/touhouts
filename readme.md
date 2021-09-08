@@ -36,3 +36,7 @@ how collisions are handled
 how things are garbaged
 how wrapping works and why
 what things are taken from asteroids
+
+movement values as defaults: 
+alien movement vector is based on the elapsed time working as an angle, with a constant downward vector
+alien bullets is their respecitve aliens movement vector at the time of creation
