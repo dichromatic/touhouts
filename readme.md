@@ -24,8 +24,6 @@ if bullets dont expire or expire on screen exit then it will keep torusing aroun
 
 all entities will only wrap in the x axis. bullets will stop existing once it hits the y canvas limits (0 or 600) and players and aliens cant cross that boundary. 
 
-bullets will have angle in later revisions. 
+shields will circle around the player as balls. Will have differing hp by overlapping different circles 
 
-shields will circle around the player as balls
-
-add ways for custom intervals, different levels, different bullet movement, different alien movement
+add ways for custom intervals, different levels, different bullet movement, different alien movement for the full touhou game -> bullets will have angle in later revisions. 
