@@ -1,7 +1,7 @@
 import { fromEvent,interval, merge } from 'rxjs'; 
 import { map, filter, scan} from 'rxjs/operators';
 
-type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f' | "1" | "2" | "3"
+type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f' | 'q' | 'w' | 'e'
 type Event = 'keydown' | 'keyup'
 
 function spaceinvaders() {
@@ -12,9 +12,9 @@ function spaceinvaders() {
             CanvasSize:600,
             BulletRadius: 5,
             BulletVelocity: 3.5,
-            AlienBulletVelocity: 1,
+            AlienBulletVelocity: 1.5,
             AlienBulletDirection: 180,
-            AlienVelocity: 2,
+            AlienVelocity: 1,
             PlayerVelocity: 3,
             PlayerRadius: 5,
             AlienRadius: 10,
@@ -50,9 +50,8 @@ function spaceinvaders() {
     startReverse = keyObservable('keydown','ArrowDown', ()=>new Thrust(-Constants.PlayerVelocity)),
     stopReverse = keyObservable('keyup','ArrowDown', ()=>new Thrust(0)),
     shoot = keyObservable('keydown','f', ()=>new Shoot()),
-    level1 = keyObservable('keydown','1', ()=>new Level(1)),
-    level2 = keyObservable('keydown','2', ()=>new Level(2)),
-    level3 = keyObservable('keydown','3', ()=>new Level(3))
+    level1 = keyObservable('keydown','q', ()=>new Level(1)),
+    level2 = keyObservable('keydown','w', ()=>new Level(2))
 
 // --------------------------------------------------------------------------------------
 // defining templates for entities and state
@@ -121,8 +120,8 @@ function spaceinvaders() {
         // create array of aliens for their 2d positions
         startAliens = [
             // [...Array(7)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*80, 100))(0)),
-            [...Array(15)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*50, 150))(0)),
-            [...Array(15)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*50, 200))(0)),
+            // [...Array(15)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*50, 150))(0)),
+            // [...Array(15)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*50, 200))(0)),
             // [...Array(8)].map((_,i) => createAlien(String(i+29))(Constants.AlienRadius)(new Vec((i)*60, 250))(0))
         ],
     
@@ -131,7 +130,7 @@ function spaceinvaders() {
             ship: createShip(),
             bullets: [],
             alienBullets: [],
-            aliens: flatMap(startAliens, x => x), //flatmap from asteroids used to flatten, couldnt be stuffed writing my own flatten so just used flatmap with an extra argument function that does nothing lol
+            aliens: [createAlien(String(1))(Constants.AlienRadius)(new Vec(Constants.CanvasSize/2, 100))(0)],
             garbage: [],
             objCount: 50,
             gameOver: false
@@ -148,9 +147,9 @@ function spaceinvaders() {
                 binnedBullets: Entity[] = s.bullets.filter(boundarybin),
                 activeBullets = s.bullets.filter(not(boundarybin)),
                 binnedAlienBullets: Entity[] = s.alienBullets.filter(boundarybin),
-                activeAlienBullets = s.alienBullets.filter(not(boundarybin)),
-                binnedAliens: Entity[] = s.aliens.filter(boundarybin),
-                activeAliens = s.aliens.filter(not(boundarybin));
+                activeAlienBullets = s.alienBullets.filter(not(boundarybin))
+                // binnedAliens: Entity[] = s.aliens.filter(boundarybin),
+                // activeAliens = s.aliens.filter(not(boundarybin));
 
             // toruswrap taken from asteroids, but only done on X dimension
             const torusWrapX = ({x,y}:Vec) => { 
@@ -159,14 +158,20 @@ function spaceinvaders() {
             return new Vec(wrap(x),y)
             }
 
-            // function to give aliens a velocity vector
-            const alienMovement = (o: Entity) => <Entity> {...o,
-                add: Vec.unitVecInDirection(90).scale(1),
-                pos: torusWrapX(o.pos.add(o.vel)),
-                vel: o.add.add(Vec.unitVecInDirection(elapsed*2).scale(1))
+            const torusWrap = ({x,y}:Vec) => { 
+                const wrap = (v:number) => 
+                v < 0 ? v + Constants.CanvasSize : v > Constants.CanvasSize ? v - Constants.CanvasSize : v;
+            return new Vec(wrap(x),wrap(y))
             }
 
-            // movement of entities go through here for simplicity
+            // function to give aliens custom movement
+            const alienMovement = (o: Entity) => <Entity> {...o,
+                add: Vec.unitVecInDirection(elapsed*2).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
+                pos: torusWrap(o.pos.add(o.vel)),
+                vel: o.add
+            }
+
+            // movement of entities go through here 
             const moveEntity = (o: Entity) => <Entity> {
                 ...o,
                 pos: torusWrapX(o.pos.add(o.vel)),
@@ -220,10 +225,10 @@ function spaceinvaders() {
             return createAlienBullets(handleCollisions({...s,
                 ship:moveEntity(s.ship),
                 bullets: activeBullets.map(moveBullet),
-                aliens: activeAliens.map(alienMovement),
-                alienBullets: activeAlienBullets.map(moveAlienBullet),
+                aliens: s.aliens.length > 1 ? s.aliens.map(alienMovement): s.aliens,
+                alienBullets: s.aliens.length > 1 ? activeAlienBullets.map(moveAlienBullet): s.alienBullets,
                 time: elapsed,
-                garbage: s.garbage.concat(binnedBullets, binnedAliens, binnedAlienBullets)
+                garbage: s.garbage.concat(binnedBullets, binnedAlienBullets)
             }))
         },
 
@@ -242,7 +247,7 @@ function spaceinvaders() {
                     add: Vec.unitVecInDirection(0).scale(e.magnitude)   // puts a magnitude into add to add onto velocity vector later in moveEntity
                 }
             } :
-            e instanceof Shoot ? {...s,
+            e instanceof Shoot ?{...s,
                 bullets: s.bullets.concat([
                     ((unitVec:Vec) => 
                         createBullet                                    //create new bullet on space press
@@ -253,13 +258,18 @@ function spaceinvaders() {
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
             } :
+            e instanceof Level ? e.level === 1 ? {...s,
+                aliens: [...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 100))(0))
+            }: {...s,
+                aliens: s.aliens.concat([...Array(8)].map((_,i) => createAlien(String(i+1))(Constants.AlienRadius)(new Vec((i)*100, 0))(0)), [...Array(8)].map((_,i) => createAlien(String(i+16))(Constants.AlienRadius)(new Vec((i)*100, 200))(0)))
+            }:
             tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
         // main game stream. merge all events and subscribe to updater
         const subscription = 
-            merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate,
+            merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate, 
                 stopRightTranslate,startThrust,stopThrust,startReverse, stopReverse,
-                shoot)  
+                shoot, level1, level2)  
                 .pipe(scan(reduceState, initialState)).subscribe(updateView)
 
 // --------------------------------------------------------------------------------------
@@ -334,6 +344,8 @@ function showKeys() {
     showKey('ArrowUp');
     showKey('ArrowDown');
     showKey('f');
+    showKey('q');
+    showKey('w');
   }
 setTimeout(showKeys, 0)
 
