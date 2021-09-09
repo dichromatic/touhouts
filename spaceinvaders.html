@@ -42,8 +42,9 @@
     background-color:pink;
   }
   div#controls {
-      float: right;
-      margin: 50px;
+      float: left;
+      margin-right: 1000px;
+      width: 600px;
   }
   .center{
       display: block;
@@ -65,22 +66,33 @@
     </g>
 </svg>
 <div id="controls">
+<h2>Instructions:</h2>
+<p>To start playing, press either Q or W to choose your difficulty.</p>
+<p>Control your character with the arrow keys, and fire with F.</p>
+<p>If you get hit by a bullet or an alien, the game is over.</p>
+<p>Your hitbox is visible in the middle of the sprite.</p>
+<p>Your player has 3 shields each with 3 HP. </p>
+<p>HP is lost by the shields touching a bullet or an alien.</p>
+<p>Each HP lost will decrease the size of the shield. </p>
+<p>Aliens will disappear as soon as your bullet hits them.</p>
+<p>You win the game once all of the aliens on the screen have been wiped.</p>
+
 <h2>Controls:</h2>
 <table>
     <!-- <tr><td>Thrust</td><td>Up Arrow</td></tr> -->
-    <tr><td>Left</td><td><div id="ArrowLeft" class="key">&#8678;</div></td></tr>
-    <tr><td>Right</td><td><div id="ArrowRight" class="key">&#8680;</div></td></tr>
-    <tr><td>Forward</td><td><div id="ArrowUp" class="key">&#8679;</div></td></tr>
-    <tr><td>Reverse</td><td><div id="ArrowDown" class="key">&#8681;</div></td></tr>
-    <tr><td>Fire</td><td>F<div class="key"></div></td>
+    <tr><td>Left:</td><td><div id="ArrowLeft" class="key">&#8678;</div></td></tr>
+    <tr><td>Right:</td><td><div id="ArrowRight" class="key">&#8680;</div></td></tr>
+    <tr><td>Forward:</td><td><div id="ArrowUp" class="key">&#8679;</div></td></tr>
+    <tr><td>Reverse:</td><td><div id="ArrowDown" class="key">&#8681;</div></td></tr>
+    <tr><td>Fire:</td><td>F<div class="key"></div></td>
     <!-- 
     <tr><td>Restart Game</td><td>F5</td></tr> -->
 </table>
 <h2>Levels:</h2>
 <table>
     <!-- <tr><td>Thrust</td><td>Up Arrow</td></tr> -->
-    <tr><td>Easy Mode</td><td>Q<div class="key"></div></td>
-    <tr><td>Impossible Mode</td><td>W<div class="key"></div></td>
+    <tr><td>Easy Mode:</td><td>Q<div class="key"></div></td>
+    <tr><td>Hard Mode:</td><td>W<div class="key"></div></td>
     <!-- 
     <tr><td>Restart Game</td><td>F5</td></tr> -->
 </table>
