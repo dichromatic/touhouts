@@ -1,7 +1,7 @@
 <html>
   <head>
     <style>
-  .ship {
+  .player {
     fill:red;
   }
   .alien {
@@ -57,18 +57,20 @@
 <body>
   <script src="dist/spaceinvaders.js"></script>
   <svg id="svgCanvas" width="600" height="600" style="background-color:black">
-    <g id="ship">
+    <g id="player">
     <image href=reimu.png class="center" transform="translate(-18.5, -25.5)" >
     </image>
-    <circle class="ship" r="7" stroke="white" stroke-width="2"></circle>
+    <circle class="player" r="7" stroke="white" stroke-width="2"></circle>
     <!-- <polygon class="ship" points="-15,20 15,20 0,-20"> -->
     <!-- </polygon> -->
     </g>
 </svg>
 <div id="controls">
 <h2>Instructions:</h2>
-<p>To start playing, press either Q or W to choose your difficulty.</p>
+<p>Welcome to a Bullet Hell Shmup inspired Space Invaders</p>
 <p>Control your character with the arrow keys, and fire with F.</p>
+<p>To spawn enemies, press either Q or W to choose your difficulty.</p>
+<p>Your character's position wraps around the screen so be careful!</p>
 <p>If you get hit by a bullet or an alien, the game is over.</p>
 <p>Your hitbox is visible in the middle of the sprite.</p>
 <p>Your player has 3 shields each with 3 HP. </p>
@@ -76,6 +78,7 @@
 <p>Each HP lost will decrease the size of the shield. </p>
 <p>Aliens will disappear as soon as your bullet hits them.</p>
 <p>You win the game once all of the aliens on the screen have been wiped.</p>
+<p>You can reset the game by doing ctrl-R</p>
 
 <h2>Controls:</h2>
 <table>

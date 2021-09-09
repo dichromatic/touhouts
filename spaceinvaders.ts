@@ -22,7 +22,7 @@ function spaceinvaders() {
         } as const
 
     // the game has these entity types:
-    type ViewType = 'ship' | 'rock' | 'bullet' | 'alien' | 'alienbullet' | 'shields'
+    type ViewType = 'player' | 'rock' | 'bullet' | 'alien' | 'alienbullet' | 'shields'
 
     // game has these game state changes
     class Tick { constructor(public readonly elapsed:number) {} }
@@ -73,7 +73,7 @@ function spaceinvaders() {
     // define game state as type for a template
     type State = Readonly<{
         time: number,                       // time the state is in in relation to Tick interval
-        ship: Entity,                       // the sole ship / player in the game
+        player: Entity,                       // the sole player / player in the game
         shields: ReadonlyArray<Entity>,     // players shields
         bullets: ReadonlyArray<Entity>,     // bullet objects array
         alienBullets: ReadonlyArray<Entity> // alienbullet objects array
@@ -103,11 +103,11 @@ function spaceinvaders() {
     createAlienBullet = createEntity('alienbullet'),
     createShield = createEntity('shields')
 
-    // since there is only one ship, no need to make it out of a createentity instance
-    function createShip():Entity {
+    // since there is only one player, no need to make it out of a createentity instance
+    function createplayer():Entity {
         return { 
-            ViewType: 'ship',
-            id: 'ship',
+            ViewType: 'player',
+            id: 'player',
             radius: Constants.PlayerRadius,
             pos: new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8),
             vel: Vec.Zero,
@@ -121,7 +121,7 @@ function spaceinvaders() {
         // create initial state and entities
         initialState:State = {
             time: 0,
-            ship: createShip(),
+            player: createplayer(),
             shields: [].concat(
                 [...Array(3)].map((_,i) => createShield(String(i))(((i+1)*3))(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(60).scale(35)))(Vec.Zero)(0)),
                 [...Array(3)].map((_,i) => createShield(String(i+3))((i+1)*3)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(300).scale(35)))(Vec.Zero)(0)),
@@ -194,8 +194,8 @@ function spaceinvaders() {
             const handleCollisions = (s:State) => {
                 const entitiesCollided = ([a,b]: [Entity,Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,      // check if the positions of both entities are in the region of their radii
 
-                shipAlienCollision = s.aliens.filter(r => entitiesCollided([s.ship, r])).length > 0,                    // check if the ship has collided with an entity
-                shipBulletCollision = s.alienBullets.filter(r => entitiesCollided([s.ship, r])).length > 0,             
+                playerAlienCollision = s.aliens.filter(r => entitiesCollided([s.player, r])).length > 0,                    // check if the player has collided with an entity
+                playerBulletCollision = s.alienBullets.filter(r => entitiesCollided([s.player, r])).length > 0,             
 
                 allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),             // flatten bullets and aliens 
                 collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                                // filter for collided bullets and aliens
@@ -221,7 +221,7 @@ function spaceinvaders() {
                     alienBullets: cut(s.alienBullets)(collidedAlienBullets),
                     shields: cut(s.shields)(collidedShields),
                     garbage: s.garbage.concat(collidedBullets, collidedAliens, collidedShields, collidedAlienBullets),
-                    gameOver: shipAlienCollision || shipBulletCollision,
+                    gameOver: playerAlienCollision || playerBulletCollision,
                     gameWon: win
                 };
             }
@@ -243,7 +243,7 @@ function spaceinvaders() {
 
             // bring everything together
             return createAlienBullets(handleCollisions({...s,
-                ship:moveEntity(s.ship),
+                player:moveEntity(s.player),
                 shields: s.shields.map(moveEntity),
                 bullets: activeBullets.map(moveBullet),
                 aliens: s.aliens.map(alienMovement),
@@ -259,16 +259,16 @@ function spaceinvaders() {
         // reducing states
         reduceState = (s:State, e:Shoot|Translate|Thrust|Tick)=>
             e instanceof Translate ? {...s, 
-                ship: {...s.ship, 
+                player: {...s.player, 
                     add: Vec.unitVecInDirection(90).scale(e.magnitude)  // puts a magnitude into add to add onto velocity vector later in moveEntity
                 },
-                shields: s.shields.map(x => <Entity> {...x, add: Vec.unitVecInDirection(90).scale(e.magnitude)}) // move shields with input as well, syncing with ship
+                shields: s.shields.map(x => <Entity> {...x, add: Vec.unitVecInDirection(90).scale(e.magnitude)}) // move shields with input as well, syncing with player
             } :
             e instanceof Thrust ? {...s,
-                ship: {...s.ship,
+                player: {...s.player,
                     add: Vec.unitVecInDirection(0).scale(e.magnitude)   // puts a magnitude into add to add onto velocity vector later in moveEntity
                 },
-                shields: s.shields.map(x => <Entity> {...x, add: Vec.unitVecInDirection(0).scale(e.magnitude)}) // move shields with input as well, syncing with ship
+                shields: s.shields.map(x => <Entity> {...x, add: Vec.unitVecInDirection(0).scale(e.magnitude)}) // move shields with input as well, syncing with player
             } :
             e instanceof Shoot ?{...s,
                 bullets: s.bullets.concat([
@@ -276,7 +276,7 @@ function spaceinvaders() {
                         createBullet                                    //create new bullet on space press
                         (String(s.objCount))                            //bullet id
                         (Constants.BulletRadius)                        //bullet rad
-                        (s.ship.pos.add(unitVec.scale(25)))             //bullet pos
+                        (s.player.pos.add(unitVec.scale(25)))             //bullet pos
                         (Vec.Zero)
                         (s.time))                                       //bullet time created
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
@@ -302,7 +302,7 @@ function spaceinvaders() {
         // view updater function - only part of the code that isnt pure
         function updateView(s: State) {
             const  
-                ship = document.getElementById("ship")!,
+                player = document.getElementById("player")!,
                 svg = document.getElementById("svgCanvas")!,
                 updateEntityView = (b: Entity) => { // taken from asteroids as a way to generate entity objects for HTML
                     function createEntityView() {
@@ -316,7 +316,7 @@ function spaceinvaders() {
                     attr(v, {cx:b.pos.x, cy:b.pos.y})
                 };
 
-            attr(ship, {transform: `translate(${s.ship.pos.x},${s.ship.pos.y})`});
+            attr(player, {transform: `translate(${s.player.pos.x},${s.player.pos.y})`});
             s.shields.forEach(updateEntityView)
             s.aliens.forEach(updateEntityView)
             s.bullets.forEach(updateEntityView)
