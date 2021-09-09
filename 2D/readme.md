@@ -46,3 +46,5 @@ alien bullets is their respecitve aliens movement vector at the time of creation
 ),//.map(x => x.pos.add(Vec.unitVecInDirection(90).scale(-10))),
 
 for every sub interval add velocity, for every not sub interval minus that velocity
+
+talk about how trying to spawn bullets at an aliens position in a list needed some functional fuckery

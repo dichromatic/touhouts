@@ -1,0 +1,98 @@
+<html>
+  <head>
+    <style>
+  .player {
+    fill:red;
+  }
+  .alien {
+      fill: white
+  }
+  .booster {
+    fill: orange;
+  }
+  .hidden {
+    visibility:hidden;
+  }
+  .bullet {
+    fill:white;
+  }
+  .alienbullet{
+    fill:red;
+  }
+  .shields{
+    fill:lightcoral;
+  }
+  .gameover{
+    font-family: sans-serif;
+    font-size: 80px;
+    fill: red;
+  }
+  .gamewon{
+    font-family: sans-serif;
+    font-size: 80px;
+    fill: lightblue;
+  }
+  .key {
+    width:18px;
+    text-align:center;
+    border-radius:3px;
+    background-color:lightgray;
+  }
+  .highlight {
+    background-color:pink;
+  }
+  div#controls {
+      float: left;
+      margin-right: 1000px;
+      width: 600px;
+  }
+  .center{
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+  }
+    </style>
+  </head>
+<body>
+  <script src="dist/spaceinvaders.js"></script>
+  <svg id="svgCanvas" width="600" height="600" style="background-color:black">
+    <g id="player">
+    <image href=reimu.png class="center" transform="translate(-18.5, -25.5)" >
+    </image>
+    <circle class="player" r="7" stroke="white" stroke-width="2"></circle>
+    </g>
+</svg>
+<div id="controls">
+<h2>CURRENT TOTAL SCORE:</h2><h1 id="score"></h1>
+<h2>CURRENT GRAZE SCORE:</h2><h1 id="graze"></h1>
+<h2>Instructions:</h2>
+<p>Welcome to a Bullet Hell Shmup inspired Space Invaders!</p>
+<p>Control your character with the arrow keys, and fire with F.</p>
+<p>To spawn enemies, press either Q or W to choose your difficulty.</p>
+<p>Your character's position wraps around the screen so be careful!</p>
+<p>If you get hit by a bullet or an alien, the game is over.</p>
+<p>Your hitbox is visible in the middle of the sprite.</p>
+<p>Your player has an invincible rotating shield.</p>
+<p>When the shield touches an alien's bullet or alien itself, it will die</p>
+<p>Aliens will disappear as soon as your bullet / shield hits them.</p>
+<p>You win the game once all of the aliens on the screen have been wiped.</p>
+<p>You can reset the game by pressing r.</p>
+
+<h2>Controls:</h2>
+<table>
+    <tr><td>Left:</td><td><div id="ArrowLeft" class="key">&#8678;</div></td></tr>
+    <tr><td>Right:</td><td><div id="ArrowRight" class="key">&#8680;</div></td></tr>
+    <tr><td>Forward:</td><td><div id="ArrowUp" class="key">&#8679;</div></td></tr>
+    <tr><td>Reverse:</td><td><div id="ArrowDown" class="key">&#8681;</div></td></tr>
+    <tr><td>Fire:</td><td>F<div class="key"></div></td>
+    <tr><td>Reset:</td><td>R<div class="key"></div></td>
+</table>
+<h2>Levels:</h2>
+<table>
+    <tr><td>Easy Mode:</td><td>Q<div class="key"></div></td>
+    <tr><td>Hard Mode:</td><td>W<div class="key"></div></td>
+</table>
+</div>
+</body>
+</html>
