@@ -165,7 +165,7 @@ function spaceinvaders() {
 
             // function to give aliens custom movement
             const alienMovement = (o: Entity) => <Entity> {...o,
-                add: Vec.unitVecInDirection(elapsed).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
+                add: Vec.unitVecInDirection(elapsed*10).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
                 pos: torusWrap(o.pos.add(o.vel)),
                 vel: o.add
             }
@@ -283,9 +283,9 @@ function spaceinvaders() {
                 objCount: s.objCount + 1 
             } :
             e instanceof Level ? e.level === 1 ? {...s,
-                aliens: [...Array(8)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i)*100, 100))(Vec.Zero)(0))
+                aliens: [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0))
             }: {...s,
-                aliens: s.aliens.concat([...Array(8)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i)*100, 0))(Vec.Zero)(0)), [...Array(8)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i)*100, 200))(Vec.Zero)(0)))
+                aliens: s.aliens.concat([...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 0))(Vec.Zero)(0)), [...Array(7)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0)))
             }:
             tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
