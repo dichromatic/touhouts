@@ -17,10 +17,11 @@ function spaceinvaders() {
             AlienVelocity: 1,
             PlayerVelocity: 3,
             PlayerRadius: 5,
+            ShieldRadius: 8,
             AlienRadius: 10,
             StartAlienAmount: 30,
             AlienScore: 5,
-            GrazeRadius: 10
+            GrazeRadius: 20
         } as const
 
     // the game has these entity types:
@@ -104,31 +105,19 @@ function spaceinvaders() {
         acc: Vec.Zero,
         createTime: timeCreated
     },
+
     createAlien = createEntity('alien'),
     createBullet = createEntity('bullet'),
     createAlienBullet = createEntity('alienbullet'),
-    createShield = createEntity('shields')
-
-    // since there is only one player, no need to make it out of a createentity instance
-    function createplayer():Entity {
-        return { 
-            ViewType: 'player',
-            id: 'player',
-            radius: Constants.PlayerRadius,
-            pos: new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8),
-            vel: Vec.Zero,
-            add: Vec.Zero,
-            acc: Vec.Zero,
-            createTime: 0
-        }
-    }
+    createShield = createEntity('shields'),
+    createPlayer = createEntity('player')
 
     const
         // create initial state and entities
         initialState:State = {
             time: 0,
-            player: createplayer(),
-            shields: createShield('shield')(8)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(90).scale(-35)))(Vec.Zero)(0),
+            player: createPlayer('player')(Constants.PlayerRadius)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8))(Vec.Zero)(0),
+            shields: createShield('shield')(Constants.ShieldRadius)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(90).scale(-35)))(Vec.Zero)(0),
             bullets: [],
             alienBullets: [],
             aliens: [],
@@ -250,7 +239,14 @@ function spaceinvaders() {
 
             // bring everything together
             return s.garbageClean ? {...s,      // trying to create a garbage cleaner to reset the scene to initialstate
-                garbage: []
+                garbage: [],
+                time: 0,
+                player: createPlayer('player')(Constants.PlayerRadius)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8))(Vec.Zero)(0),
+                shields: createShield('shield')(Constants.ShieldRadius)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(90).scale(-35)))(Vec.Zero)(0),
+                objCount: 50,
+                score: [0,0],
+                gameOver: false,
+                gameWon: false
             }:
             createAlienBullets(handleCollisions({...s,
                 player:playerMovement(s.player),
@@ -297,27 +293,27 @@ function spaceinvaders() {
                 objCount: s.objCount + 1 
             }:
             e instanceof Level ? e.level === 1 ? {...s,     // level selector, either easy or hard so just used a ternary. spawned all the aliens here
-                aliens: [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0))
+                aliens: [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0)) // create an array of aliens on level choose
             }: {...s,
                 aliens: s.aliens.concat(
-                    [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*80)+60, 0))(Vec.Zero)(0)), 
+                    [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*80)+60, 0))(Vec.Zero)(0)), // create an array of aliens on level choose
                     [...Array(7)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i*80)+60, 100))(Vec.Zero)(0))
                     )
             }:
-            // e instanceof Reset ? {...s,
-            //     garbage: s.garbage.concat(s.alienBullets, s.aliens, s.bullets),
-            //     alienBullets: [],
-            //     aliens: [],
-            //     bullets: [],
-            //     garbageClean: true
-            // }:
+            e instanceof Reset ? {...s,
+                garbage: s.garbage.concat(s.alienBullets, s.aliens, s.bullets),
+                alienBullets: [],
+                aliens: [],
+                bullets: [],
+                garbageClean: true,
+            }:
             tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
         // main game stream. merge all events and subscribe to updater
         const subscription = 
             merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate, 
                 stopRightTranslate,startThrust,stopThrust,startReverse, stopReverse,
-                shoot, level1, level2)  
+                shoot, level1, level2,reset)  
                 .pipe(scan(reduceState, initialState)).subscribe(updateView)
 
 // --------------------------------------------------------------------------------------

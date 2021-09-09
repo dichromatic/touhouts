@@ -44,3 +44,5 @@ alien bullets is their respecitve aliens movement vector at the time of creation
 // [...Array(3)].map((_,i) => createShield(String(i+3))((i+1)*3)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(300).scale(35).add(Vec.unitVecInDirection(90).scale(-5))))(Vec.Zero)(0)),
 // [...Array(3)].map((_,i) => createShield(String(i+6))((i+1)*3)(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8).add(Vec.unitVecInDirection(0).scale(-35).add(Vec.unitVecInDirection(90).scale(-5))))(Vec.Zero)(0))
 ),//.map(x => x.pos.add(Vec.unitVecInDirection(90).scale(-10))),
+
+for every sub interval add velocity, for every not sub interval minus that velocity
