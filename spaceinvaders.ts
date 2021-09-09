@@ -83,6 +83,8 @@ function spaceinvaders() {
         aliens: ReadonlyArray<Entity>,      // aliens array
         garbage: ReadonlyArray<Entity>,     // garbage objects array, things that need to be removed from screen in updateview
         objCount: number,                   // object count 
+        score: ReadonlyArray<number>,                      // score amount
+        garbageClean: boolean,              // boolean value to see if garbage needs cleaning (true when reset pressed)
         gameOver: boolean,
         gameWon: boolean
     }>
@@ -131,6 +133,8 @@ function spaceinvaders() {
             aliens: [],
             garbage: [],
             objCount: 50,
+            score: [0,0],
+            garbageClean: false,
             gameOver: false,
             gameWon: false
         },
@@ -201,27 +205,29 @@ function spaceinvaders() {
                 const entitiesCollided = ([a,b]: [Entity,Entity]) => a.pos.sub(b.pos).len() < a.radius + b.radius,      // check if the positions of both entities are in the region of their radii
 
                 playerAlienCollision = s.aliens.filter(r => entitiesCollided([s.player, r])).length > 0,                // boolean from seeing if there are any collisions with the player
-                playerBulletCollision = s.alienBullets.filter(r => entitiesCollided([s.player, r])).length > 0,             
+                playerAlienBulletCollision = s.alienBullets.filter(r => entitiesCollided([s.player, r])).length > 0,             
 
                 shieldAlienCollision = s.aliens.filter(r => entitiesCollided([s.shields, r])),
                 shieldAlienBulletCollision = s.alienBullets.filter(r => entitiesCollided([s.shields, r])),
  
-                allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),             // flatten bullets and aliens 
-                collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                                // filter for collided bullets and aliens
-                collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                                           // array of bullets that have collided
-                collidedAliens = [].concat(collidedBulletsAndAliens.map(([_, aliens]) => aliens), shieldAlienCollision),           // array of aliens that have collided
+                allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),                 // flatten bullets and aliens 
+                collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                                    // filter for collided bullets and aliens
+                collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                                    // array of bullets that have collided
+                collidedAliens = [].concat(collidedBulletsAndAliens.map(([_, aliens]) => aliens), shieldAlienCollision),    // array of aliens that have collided
 
-                win = s.alienBullets.length > 0 && s.aliens.length === 0,                                               // condition for winning game
+                cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                                   // function for cutting out the entities that have collided
 
-                cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                               // function for cutting out the entities that have collided
+                const entitiesGrazed = ([a,b]: [Entity, Entity]) => a.pos.sub(b.pos).len() < a.radius+5 + b.radius,         // condition for adding graze points
+                playerAlienBulletGraze = s.alienBullets.filter(r => entitiesGrazed([s.player, r])),                         // array of alienbullets grazed
+                win = s.alienBullets.length > 0 && s.aliens.length === 0                                                    // condition for winning game
 
                 return <State> {...s,
                     bullets: cut(s.bullets)(collidedBullets),
                     aliens: cut(s.aliens)(collidedAliens),
                     alienBullets: cut(s.alienBullets)(shieldAlienBulletCollision),
-                    // shields: cut(s.shields)(collidedShields),
                     garbage: s.garbage.concat(collidedBullets, collidedAliens, shieldAlienBulletCollision, shieldAlienCollision),
-                    gameOver: playerAlienCollision || playerBulletCollision,
+                    score: s.score.map((x, i) => x + [playerAlienBulletGraze.length, collidedAliens.length][i]),
+                    gameOver: playerAlienCollision || playerAlienBulletCollision,
                     gameWon: win
                 };
             }
@@ -242,7 +248,10 @@ function spaceinvaders() {
             }
 
             // bring everything together
-            return createAlienBullets(handleCollisions({...s,
+            return s.garbageClean ? {...s,
+                garbage: []
+            }:
+            createAlienBullets(handleCollisions({...s,
                 player:entityMovement(s.player),
                 shields: shieldsMovement(s.shields),
                 bullets: activeBullets.map(moveBullet),
@@ -290,15 +299,16 @@ function spaceinvaders() {
                 aliens: [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0))
             }: {...s,
                 aliens: s.aliens.concat(
-                    [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*75)+75, 0))(Vec.Zero)(0)), 
-                    [...Array(7)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i*75)+75, 100))(Vec.Zero)(0))
+                    [...Array(7)].map((_,i) => createAlien(String(i+12))(Constants.AlienRadius)(new Vec((i*80)+60, 0))(Vec.Zero)(0)), 
+                    [...Array(7)].map((_,i) => createAlien(String(i+28))(Constants.AlienRadius)(new Vec((i*80)+60, 100))(Vec.Zero)(0))
                     )
             }:
             // e instanceof Reset ? {...s,
             //     garbage: s.garbage.concat(s.alienBullets, s.aliens, s.bullets),
             //     alienBullets: [],
             //     aliens: [],
-            //     bullets: []
+            //     bullets: [],
+            //     garbageClean: true
             // }:
             tick(s, e.elapsed) // passes Tick time to tick function if not instance of anything else
         
@@ -306,7 +316,7 @@ function spaceinvaders() {
         const subscription = 
             merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate, 
                 stopRightTranslate,startThrust,stopThrust,startReverse, stopReverse,
-                shoot, level1, level2, reset)  
+                shoot, level1, level2)  
                 .pipe(scan(reduceState, initialState)).subscribe(updateView)
 
 // --------------------------------------------------------------------------------------
@@ -347,6 +357,7 @@ function spaceinvaders() {
                         console.log('Already removed: ' + v.id);
                     }
                 });
+                console.log(s.player)
             // show gameover if gameover condition true
             if (s.gameOver) {
                 // updateView(initialState);
