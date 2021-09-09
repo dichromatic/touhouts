@@ -1,7 +1,7 @@
 import { fromEvent,interval, merge } from 'rxjs'; 
 import { map, filter, scan} from 'rxjs/operators';
 
-type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f' | 'q' | 'w' | 'r'
+type Key = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'f' | 'r'
 type Event = 'keydown' | 'keyup'
 
 function spaceinvaders() {
@@ -10,12 +10,12 @@ function spaceinvaders() {
     const
         Constants = {
             CanvasSize:600,
-            BulletRadius: 5, BulletVelocity: 3,
+            BulletRadius: 7, BulletVelocity: 3,
             AlienBulletVelocity: 1.5, AlienBulletDirection: 180,
             AlienVelocity: 1,
             PlayerVelocity: 3,
-            PlayerX: 50, PlayerY:30,
-            ShieldX:80, ShieldY:5,
+            PlayerX: 10, PlayerY:10,
+            ShieldX:100, ShieldY:5,
             AlienX: 50, AlienY: 30,
             StartAlienAmount: 30,
             AlienScoreMultiplier: 5,
@@ -23,7 +23,7 @@ function spaceinvaders() {
         } as const
 
     // the game has these entity types:
-    type ViewType = 'player' | 'bullet' | 'alien' | 'alienbullet' | 'shield'
+    type ViewType = 'player' | 'bullet' | 'alien' | 'alienbullet' | 'shields'
 
     // game has these game state changes
     class Tick { constructor(public readonly elapsed:number) {} }
@@ -47,8 +47,6 @@ function spaceinvaders() {
     stopLeftTranslate = keyObservable('keyup','ArrowLeft',()=>new Translate(0)),
     stopRightTranslate = keyObservable('keyup','ArrowRight',()=>new Translate(0)),
     shoot = keyObservable('keydown','f', ()=>new Shoot()),
-    level1 = keyObservable('keydown','q', ()=>new Level(1)),
-    level2 = keyObservable('keydown','w', ()=>new Level(2)),
     reset = keyObservable('keydown', 'r', ()=>new Reset())
 
 // --------------------------------------------------------------------------------------
@@ -103,7 +101,7 @@ function spaceinvaders() {
     createBullet = createEntity('bullet'),
     createAlienBullet = createEntity('alienbullet'),
     createPlayer = createEntity('player'),
-    createShield = createEntity('player')
+    createShield = createEntity('shields')
 
     const
         // create initial state and entities
@@ -111,15 +109,23 @@ function spaceinvaders() {
             time: 0,
             player: createPlayer('player')(new Vec(Constants.PlayerX, Constants.PlayerY))(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8))(Vec.Zero)(0),
             shields: [].concat(
-                [...Array(6)].map((_,i) => createShield(String(i))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*100, Constants.CanvasSize*0.7))(Vec.Zero)(0)),
-                [...Array(6)].map((_,i) => createShield(String(i+6))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*100, Constants.CanvasSize*0.7+5))(Vec.Zero)(0)),
-                [...Array(6)].map((_,i) => createShield(String(i+12))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*100, Constants.CanvasSize*0.7+10))(Vec.Zero)(0))
+                [...Array(3)].map((_,i) => createShield(String(i))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*200+100, Constants.CanvasSize*0.7))(Vec.Zero)(0)),
+                [...Array(3)].map((_,i) => createShield(String(i+3))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*200+100, Constants.CanvasSize*0.7+5))(Vec.Zero)(0)),
+                [...Array(3)].map((_,i) => createShield(String(i+6))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*200+100, Constants.CanvasSize*0.7+10))(Vec.Zero)(0)),
+                [...Array(3)].map((_,i) => createShield(String(i+9))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*200+100, Constants.CanvasSize*0.7+15))(Vec.Zero)(0)),
+                [...Array(3)].map((_,i) => createShield(String(i+12))(new Vec(Constants.ShieldX, Constants.ShieldY))(new Vec(i*200+100, Constants.CanvasSize*0.7+20))(Vec.Zero)(0))
                 ),
             bullets: [],
             alienBullets: [],
-            aliens: [],
+            aliens: [].concat(
+                [...Array(7)].map((_,i) => createAlien(String(i+15))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 20))(Vec.Zero)(0)), // create an array of aliens on level choose
+                [...Array(7)].map((_,i) => createAlien(String(i+22))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 70))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+39))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 120))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+46))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 170))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+53))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 220))(Vec.Zero)(0))
+            ),
             garbage: [],
-            objCount: 50,
+            objCount: 100,
             score: [0,0],
             garbageClean: false,
             gameOver: false,
@@ -148,8 +154,8 @@ function spaceinvaders() {
 
             // function to give aliens custom movement
             const alienMovement = (o: Entity) => <Entity> {...o,
-                add: Vec.unitVecInDirection(elapsed*10).scale(1).add(Vec.unitVecInDirection(0).scale(-1)),
-                pos: torusWrap(o.pos.add(o.vel)),
+                add: Vec.unitVecInDirection(90).scale(elapsed/1000),
+                pos: elapsed % 300 === 0 ? torusWrap(o.pos.add(o.vel)).add(Vec.unitVecInDirection(0).scale(-20)): torusWrap(o.pos.add(o.vel)),
                 vel: o.add
             }
 
@@ -170,7 +176,7 @@ function spaceinvaders() {
              const shieldsMovement = (o: Entity) => <Entity> {
                 ...o,
                 pos: torusWrap(o.pos.add(o.vel)),
-                vel: o.add.add(Vec.unitVecInDirection(elapsed*3.2).scale(2))    // shield rotation based on time interval as angle, then vector manipulate as appropriate
+                vel: o.add.add(Vec.unitVecInDirection(90).scale(0))    // shield rotation based on time interval as angle, then vector manipulate as appropriate
             }
 
             // movement of bullet needs to have a constant velocity, so needs different physics. 
@@ -200,15 +206,18 @@ function spaceinvaders() {
                 allBulletsAndAliens = flatMap(s.bullets, b => s.aliens.map<[Entity, Entity]>(r => [b, r])),                 // flatten bullets and aliens 
                 collidedBulletsAndAliens = allBulletsAndAliens.filter(entitiesCollided),                                    // filter for collided bullets and aliens
 
-                collidedBullets = collidedBulletsAndAliens.map(([bullet, _]) => bullet),                                    // array of bullets that have collided with aliens
+                allBulletsAndShields = flatMap(s.bullets, b => s.shields.map<[Entity, Entity]>(r => [b, r])),                // flatten bullets and shields
+                collidedBulletsAndShields = allBulletsAndShields.filter(entitiesCollided),                                  // filter for collided bullets and shields
+
+                collidedBullets = [].concat(collidedBulletsAndAliens.map(([bullet, _]) => bullet), collidedBulletsAndShields.map(([bullet, _]) => bullet)),                                    // array of bullets that have collided with aliens and shields
                 collidedAliens = collidedBulletsAndAliens.map(([_, aliens]) => aliens),                                     // array of aliens that have collided with player bullets
                 collidedShields = collidedShieldsAndAlienBullets.map(([shields, _]) => shields),                            // array of shields that have collided with alien bullets
-                collidedAlienBullets = collidedShieldsAndAlienBullets.map(([shields, _]) => shields)                             // array of shields that have collided with alien bullets
+                collidedAlienBullets = collidedShieldsAndAlienBullets.map(([_, alienBullets]) => alienBullets)               // array of shields that have collided with alien bullets
 
                 const entitiesGrazed = ([a,b]: [Entity, Entity]) => a.pos.sub(b.pos).len() < (a.size.add(a.size).len())/2 + Constants.GrazeDistance,         // condition for adding graze points
                 playerAlienBulletGraze = s.alienBullets.filter(r => entitiesGrazed([s.player, r])),                                             // array of alienbullets grazed by the player
 
-                win = s.alienBullets.length > 0 && s.aliens.length === 0,                                                 // condition for winning game
+                win = s.aliens.length === 0,                                                 // condition for winning game
                 cut = except((a: Entity) => (b: Entity) => a.id === b.id)                                                   // function for cutting out entities from one list by another's
 
                 return <State> {...s,
@@ -226,26 +235,27 @@ function spaceinvaders() {
             // one of the most scuffed map callback functions i have ever written - converts every alien into an alienbullet just so i can spawn an alien bullet with position relative to the alien every half a second
             const createAlienBullets = (s:State) => {
                 return <State> {...s,
-                    alienBullets: s.time % 50 === 0 ? s.alienBullets.concat(s.aliens.map(x => 
-                        createAlienBullet
+                    alienBullets: s.time % 500 === 0 ? s.alienBullets.concat(s.aliens.map((x,i) => i >= s.aliens.length-5 ? 
+                    createAlienBullet
                         (String(elapsed+Number(x.id)+s.objCount))
                         (new Vec(Constants.BulletRadius, Constants.BulletRadius))
                         (x.pos.add(Vec.unitVecInDirection(0).scale(-20)))
-                        (x.vel)
+                        (Vec.unitVecInDirection(0).scale(-2))
                         (elapsed)
-                        )): s.alienBullets,
-                    objCount: s.time % 50 === 0 ? elapsed+s.objCount+100 : s.objCount
+                        : x, )
+                        ): s.alienBullets,
+                    objCount: s.time % 500 === 0 ? elapsed+s.objCount+100 : s.objCount
                 }
             }
 
             // bring everything together
             return s.garbageClean ? initialState:
-            createAlienBullets(handleCollisions({...s,
-                player:playerMovement(s.player),
+            handleCollisions(createAlienBullets({...s,
+                player: playerMovement(s.player),
                 shields: s.shields.map(shieldsMovement),
                 bullets: activeBullets.map(moveBullet),
                 aliens: s.aliens.map(alienMovement),
-                alienBullets: activeAlienBullets.map(moveAlienBullet),
+                alienBullets: activeAlienBullets.filter(x => x.ViewType === 'alienbullet').map(moveAlienBullet),
                 time: elapsed,
                 garbage: s.garbage.concat(binnedBullets, binnedAlienBullets)
             }))
@@ -273,14 +283,6 @@ function spaceinvaders() {
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
             }:
-            e instanceof Level ? e.level === 1 ? {...s,     // level selector, either easy or hard so just used a ternary. spawned all the aliens here
-                aliens: [...Array(7)].map((_,i) => createAlien(String(i+18))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*75)+75, 100))(Vec.Zero)(0)) // create an array of aliens on level choose
-            }: {...s,
-                aliens: s.aliens.concat(
-                    [...Array(7)].map((_,i) => createAlien(String(i+24))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*80)+60, 0))(Vec.Zero)(0)), // create an array of aliens on level choose
-                    [...Array(7)].map((_,i) => createAlien(String(i+30))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*80)+60, 100))(Vec.Zero)(0))
-                    )
-            }:
             e instanceof Reset ? {...s,
                 garbage: s.garbage.concat(s.alienBullets, s.aliens, s.bullets),
                 alienBullets: [],
@@ -293,7 +295,7 @@ function spaceinvaders() {
         // main game stream. merge all events and subscribe to updater
         const subscription = 
             merge(gameClock, startLeftTranslate,startRightTranslate,stopLeftTranslate, 
-                stopRightTranslate, shoot, level1, level2,reset)  
+                stopRightTranslate, shoot, reset)  
                 .pipe(scan(reduceState, initialState)).subscribe(updateView)
 
 // --------------------------------------------------------------------------------------
@@ -309,14 +311,14 @@ function spaceinvaders() {
 
                 updateEntityView = (b: Entity) => { // taken from asteroids as a way to generate entity objects for HTML
                     function createEntityView() {
-                        const v = document.createElementNS(svg.namespaceURI, "ellipse")!;
-                        attr(v, {id:b.id, rx: b.radius, ry:b.radius});
+                        const v = document.createElementNS(svg.namespaceURI, "rect")!;
+                        attr(v, {id:b.id, width: b.size.x, height:b.size.y, transform: "translate(" + String(-b.size.x/2) + ")"});
                         v.classList.add(b.ViewType)
                         svg.appendChild(v);
                         return v;
                     }
                     const v = document.getElementById(b.id) || createEntityView();
-                    attr(v, {cx:b.pos.x, cy:b.pos.y})
+                    attr(v, {x:b.pos.x, y:b.pos.y})
                 };
 
             attr(player, {transform: `translate(${s.player.pos.x},${s.player.pos.y})`});
@@ -336,7 +338,7 @@ function spaceinvaders() {
                         console.log('Already removed: ' + v.id);
                     }
                 });
-                console.log(s.player)
+                console.log(s.alienBullets)
             // show gameover if gameover condition true
             if (s.gameOver) {
                 // updateView(initialState);
@@ -379,12 +381,8 @@ function showKeys() {
     }
     showKey('ArrowLeft');
     showKey('ArrowRight');
-    showKey('ArrowUp');
-    showKey('ArrowDown');
     showKey('f');
-    showKey('q');
-    showKey('w');
-    showKey('r')
+
   }
 setTimeout(showKeys, 0)
 
