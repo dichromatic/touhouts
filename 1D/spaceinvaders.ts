@@ -348,7 +348,6 @@ function spaceinvaders() {
                 console.log(s.gameOver, s.time)
             // show gameover if gameover condition true
             if (s.gameOver) {
-                // updateView(initialState);
                 document.getElementById('player').style.display="none";
                 const v = document.createElementNS(svg.namespaceURI, 'text')!;
                 attr(v, {
@@ -371,7 +370,6 @@ function spaceinvaders() {
             }
             // show gamewon if gamewon condition true
             if (s.gameWon) {
-                // updateView(initialState);
                 const v = document.createElementNS(svg.namespaceURI, 'text')!;
                 attr(v, {
                     x: Constants.CanvasSize / 8,
@@ -381,6 +379,7 @@ function spaceinvaders() {
                 v.textContent = 'Game Won!';
                 svg.appendChild(v);
             }
+            // try catch because im lazy to add more attributes to state
             if (!s.gameWon) {
                 try {
                     const v = Array.from(document.getElementsByClassName('gamewon') as HTMLCollectionOf<HTMLElement>)
