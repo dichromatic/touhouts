@@ -10,10 +10,10 @@ function spaceinvaders() {
     const
         Constants = {
             CanvasSize:600,
-            BulletRadius: 7, BulletVelocity: 3,
-            AlienBulletVelocity: 1.5, AlienBulletDirection: 180,
-            AlienVelocity: 1,
-            PlayerVelocity: 3,
+            BulletRadius: 7, BulletVelocity: 15,
+            AlienBulletVelocity: 10, AlienBulletDirection: 180,
+            AlienVelocity: 30, AlienDownTime: 150, AlienFireRate: 75,
+            PlayerVelocity: 15,
             PlayerX: 10, PlayerY:10,
             ShieldX:100, ShieldY:5,
             AlienX: 25, AlienY: 25,
@@ -32,7 +32,7 @@ function spaceinvaders() {
     class Reset { constructor() {} }
 
     // define game clock
-    const gameClock = interval(10)
+    const gameClock = interval(50)
   
     // define keypress observables
     const keyObservable = <T>(e:Event, k:Key, result:()=>T)=>
@@ -130,6 +130,26 @@ function spaceinvaders() {
             gameOver: false,
             gameWon: false
         },
+        level2:State = {
+            time: 0,
+            player: createPlayer('player')(new Vec(Constants.PlayerX, Constants.PlayerY))(new Vec(Constants.CanvasSize/2, Constants.CanvasSize*0.8))(Vec.Zero)(0),
+            shields: [],
+            bullets: [],
+            alienBullets: [],
+            aliens: [].concat(
+                [...Array(7)].map((_,i) => createAlien(String(i+15))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 20))(Vec.Zero)(0)), // create an array of aliens on level choose
+                [...Array(7)].map((_,i) => createAlien(String(i+22))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 70))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+39))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 120))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+46))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 170))(Vec.Zero)(0)),
+                [...Array(7)].map((_,i) => createAlien(String(i+53))(new Vec(Constants.AlienX, Constants.AlienY))(new Vec((i*100)+50, 220))(Vec.Zero)(0))
+            ),
+            garbage: [],
+            objCount: 100,
+            score: [0,0],
+            garbageClean: false,
+            gameOver: false,
+            gameWon: false
+        },
 
 // --------------------------------------------------------------------------------------
 // functions to manipulate state and entities
@@ -153,8 +173,8 @@ function spaceinvaders() {
 
             // function to give aliens custom movement
             const alienMovement = (o: Entity) => <Entity> {...o,
-                add: Vec.unitVecInDirection(90).scale(s.time/1000),
-                pos: s.time % 300 === 0 ? torusWrap(o.pos.add(o.vel)).add(Vec.unitVecInDirection(0).scale(-20)): torusWrap(o.pos.add(o.vel)),
+                add: Vec.unitVecInDirection(90).scale(s.time/Constants.AlienVelocity),
+                pos: s.time % Constants.AlienDownTime === 0 ? torusWrap(o.pos.add(o.vel)).add(Vec.unitVecInDirection(0).scale(-20)): torusWrap(o.pos.add(o.vel)),
                 vel: o.add
             }
 
@@ -237,27 +257,27 @@ function spaceinvaders() {
             // one of the most scuffed map callback functions i have ever written - converts every alien into an alienbullet just so i can spawn an alien bullet with position relative to the alien every half a second
             const createAlienBullets = (s:State) => {
                 return <State> {...s,
-                    alienBullets: s.time % 500 === 0 ? s.alienBullets.concat(s.aliens.map((x,i) => i >= s.aliens.length-5 ? 
+                    alienBullets: s.time % Constants.AlienFireRate === 0 ? s.alienBullets.concat(s.aliens.map((x,i) => i >= s.aliens.length-5 ? 
                     createAlienBullet
                         (String(s.time+Number(x.id)+s.objCount))
                         (new Vec(Constants.BulletRadius, Constants.BulletRadius))
                         (x.pos.add(Vec.unitVecInDirection(0).scale(-20)))
-                        (Vec.unitVecInDirection(0).scale(-2))
+                        (Vec.unitVecInDirection(0).scale(-Constants.AlienBulletVelocity))
                         (s.time)
                         : x, )
                         ): s.alienBullets,
-                    objCount: s.time % 500 === 0 ? s.time+s.objCount+100 : s.objCount
+                    objCount: s.time % Constants.AlienFireRate === 0 ? s.time+s.objCount+100 : s.objCount
                 }
             }
 
             // bring everything together
-            return s.garbageClean ? initialState:
+            return s.garbageClean? initialState: s.gameWon ? level2:   // if garbage needs to be cleaned, clean it - called on reset
             handleCollisions(createAlienBullets({...s,
                 player: playerMovement(s.player),
                 shields: s.shields.map(shieldsMovement),
                 bullets: activeBullets.map(moveBullet),
                 aliens: s.aliens.map(alienMovement),
-                alienBullets: activeAlienBullets.filter(x => x.ViewType === 'alienbullet').map(moveAlienBullet),
+                alienBullets: activeAlienBullets.filter(x => x.ViewType === 'alienbullet').map(moveAlienBullet), // a side-effect (not in the impure meaning) of having to relate the position of an alien to their bullet without breaking rules of purity
                 time: s.time + 1,
                 garbage: s.garbage.concat(binnedBullets, binnedAlienBullets)
             }))
@@ -285,7 +305,9 @@ function spaceinvaders() {
                         (Vec.unitVecInDirection(0))]),                  //bullet direction vector
                 objCount: s.objCount + 1 
             }:
-            e instanceof Reset ? {...s,
+            e instanceof Reset ? s.gameWon ? {...level2,
+                garbage: level2.garbage.concat(s.alienBullets, s.aliens, s.bullets, s.shields)
+                }:{...s,
                 garbage: s.garbage.concat(s.alienBullets, s.aliens, s.bullets),
                 alienBullets: [],
                 aliens: [],
@@ -294,10 +316,9 @@ function spaceinvaders() {
                 gameOver: false,
                 gameWon: false
             }:
-            s.gameOver ? {...s,}:
+            s.gameOver ? {...s}:
             s.gameWon ? {...s}:
             tick(s)
-             // passes Tick time to tick function if not instance of anything else
         
         // main game stream. merge all events and subscribe to updater
         const subscription = 
@@ -357,7 +378,6 @@ function spaceinvaders() {
                 });
                 v.textContent = 'Game Over';
                 svg.appendChild(v);
-
             }
             if (!s.gameOver) {
                 try {
