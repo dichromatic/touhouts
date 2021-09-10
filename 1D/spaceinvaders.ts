@@ -195,7 +195,7 @@ function spaceinvaders() {
              const shieldsMovement = (o: Entity) => <Entity> {
                 ...o,
                 pos: torusWrap(o.pos.add(o.vel)),
-                vel: o.add.add(Vec.unitVecInDirection(90).scale(0))    // shield rotation based on time interval as angle, then vector manipulate as appropriate
+                vel: o.add.add(Vec.unitVecInDirection(90).scale(-1))    // shield rotation based on time interval as angle, then vector manipulate as appropriate
             }
 
             // movement of bullet needs to have a constant velocity, so needs different physics. 
